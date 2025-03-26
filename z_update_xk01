@@ -1,0 +1,55 @@
+REPORT z_update_xk01.
+
+PARAMETERS: p_lifnr TYPE lifnr OBLIGATORY.
+
+START-OF-SELECTION.
+  PERFORM update_data.
+
+FORM update_data .
+  DATA: lo_vmd_ei_api TYPE REF TO vmd_ei_api.
+  DATA: l_ti_is_master_data TYPE vmds_ei_main.
+  DATA: ls_vmds_ei_extern TYPE vmds_ei_extern.
+  DATA: lc_lifnr TYPE lifnr.
+  DATA:a TYPE vmds_ei_main,
+       b TYPE cvis_message,
+       c TYPE vmds_ei_main,
+       d TYPE cvis_message.
+**********************************************************************
+
+  CHECK p_lifnr IS NOT INITIAL.
+  CREATE OBJECT lo_vmd_ei_api.
+
+  ls_vmds_ei_extern-header-object_instance-lifnr = p_lifnr .
+  ls_vmds_ei_extern-header-object_task                      = 'U'.
+  ls_vmds_ei_extern-central_data-address-task               = 'U'.
+  ls_vmds_ei_extern-central_data-address-postal-data-name   = 'Name 1'.
+  ls_vmds_ei_extern-central_data-address-postal-data-name_2 = 'Name 2'.
+  ls_vmds_ei_extern-central_data-address-postal-data-name_3 = 'Name 3'.
+  ls_vmds_ei_extern-central_data-address-postal-data-name_4 = 'Name 4'.
+  ls_vmds_ei_extern-central_data-address-postal-data-street = 'Street 123'.
+  ls_vmds_ei_extern-central_data-address-postal-datax-name  = 'X'.
+  ls_vmds_ei_extern-central_data-address-postal-datax-name_2 = 'X'.
+  ls_vmds_ei_extern-central_data-address-postal-datax-name_3 = 'X'.
+  ls_vmds_ei_extern-central_data-address-postal-datax-name_4 = 'X'.
+  ls_vmds_ei_extern-central_data-address-postal-datax-street = 'X'.
+
+
+  APPEND ls_vmds_ei_extern TO l_ti_is_master_data-vendors.
+
+  CALL METHOD lo_vmd_ei_api->maintain_bapi
+    EXPORTING
+      is_master_data           = l_ti_is_master_data
+      iv_collect_messages      = 'X'
+    IMPORTING
+      es_master_data_correct   = a
+      es_message_correct       = b
+      es_master_data_defective = c
+      es_message_defective     = d.
+
+  IF d-is_error IS INITIAL AND d-messages[] IS INITIAL.
+    COMMIT WORK AND WAIT.
+  ELSE.
+    ROLLBACK WORK.
+  ENDIF.
+
+ENDFORM.
